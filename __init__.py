@@ -2,11 +2,12 @@
 # _*_ coding: utf-8 _*_
 # @Time : 2025/3/6 下午9:33 
 # @Author : Huzhaojun
-# @Version：V 1.0
+# @Version：V 1.0.2
 # @File : __init__.py.py
 # @desc : README.md
 
-__all__ = []
+__all__ = ["lighten_color", "count", "RoundedButton", "FindSubstitutionFrame", "EditText",
+           "NotBookTable", "NotBook", "ToolTip"]
 
 import re
 import tkinter as tk
@@ -66,12 +67,11 @@ def count(text1:str, text2:str, model) -> int:
 class RoundedButton(tk.Canvas):
     """基于Canvas实现的圆角按钮"""
 
-    def __init__(self, master, text="", radius=25, padding=10, command=None,
+    def __init__(self, master, text="", radius=25, command=None,
                  fore_ground='#FFFFFF', select_foreground='#2f5496', font=None, **kwargs):
         tk.Canvas.__init__(self, master, **kwargs)
         self.text = text
         self.radius = radius
-        self.padding = padding
         self.command = command
         self.foreground = fore_ground
         self.font = font
@@ -86,7 +86,7 @@ class RoundedButton(tk.Canvas):
         # 开始绘画
         self.draw(self.foreground)
 
-    def mouse_enter(self, event):
+    def mouse_enter(self, event=None):
         """鼠标进入动画效果"""
         amount = 50
         if self.foreground == self.select_foreground or not self.value:
@@ -102,7 +102,7 @@ class RoundedButton(tk.Canvas):
     def bbox(self, *args):
         return self.master.bbox(*args)
 
-    def mouse_leave(self, event):
+    def mouse_leave(self, event=None):
         """如果按钮状态未改变，则还原前景色"""
 
         if not self.value:
@@ -111,7 +111,7 @@ class RoundedButton(tk.Canvas):
         else:
             self.draw(fill=self.select_foreground)
 
-    def draw(self, fill):
+    def draw(self, fill=None):
         # Calculate the width and height of the button
         width = self.winfo_reqwidth()
         height = self.winfo_reqheight()
@@ -127,7 +127,7 @@ class RoundedButton(tk.Canvas):
             font=self.font if self.font else ("Helvetica", 12)
         )
 
-    def on_click(self, event):
+    def on_click(self, event=None):
         """当按钮被点击的时候"""
 
         self.value = 1 if not self.value else 0
@@ -352,7 +352,7 @@ class EditText(tk.Frame):
 
     def __init__(self, master, file_name=None, reduced=False, font=None,
                  row_mark_fg='#FFFFFF', row_mark_bg='#000000', sele_line_fg="gray", sele_line_bg=None,
-                 sele_row_mark_fg='gray', sele_row_mark_bg='white',sub_tab = True,
+                 sele_row_mark_fg='gray', sele_row_mark_bg='white',sub_tab=True, height_use=True,
                  **kwargs):
         super().__init__(master)
         self.master = master
@@ -395,7 +395,7 @@ class EditText(tk.Frame):
         self.Row_mark = tk.Text(self, fg=self.row_mark_fg, bg=self.row_mark_bg, **kwargs)
 
         # 行标高亮是否可用
-        self.Text.height_use = True
+        self.Text.height_use = height_use
 
         if self.reduced_text:
             # 文本略缩图, 强制构建一个未初始化的tcl可以理解的空间层名称，详情见BaseWidget._setup
@@ -437,10 +437,9 @@ class EditText(tk.Frame):
         """控件初始化之后的绑定事件"""
 
         self.Row_mark.pack(side=tk.LEFT, expand=False, fill=tk.Y)
-        self.text_frame.pack()
+        self.text_frame.pack(fill=tk.BOTH, expand=True)
         self.x_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
-        self.Text.pack(fill=tk.BOTH, expand=tk.YES, side=tk.LEFT if self.reduced_text else tk.TOP)
-        # self.find_frame.pack()
+        self.Text.pack(fill=tk.BOTH, expand=True, side=tk.LEFT if self.reduced_text else tk.TOP)
         self.x_scrollbar.config(command=self.Text.xview)
         self.Text.vbar.configure(command=self._scroll)
         self.Text.config(xscrollcommand=self.x_scrollbar.set)
@@ -484,12 +483,12 @@ class EditText(tk.Frame):
         if self.key_release_command:
             self.key_release_command()
 
-    def tab_key_command(self, event):
+    def tab_key_command(self, event=None):
         # Tab事件
         self.Text.insert("insert", " " * 4)
         return 'break'
 
-    def return_key_release_command(self, event):
+    def return_key_release_command(self, event=None):
         # 回车事件
         if event.keycode == 13:
             row, column = map(int, self.Text.index('insert').split("."))
@@ -501,7 +500,7 @@ class EditText(tk.Frame):
 
             self.Text.insert('insert', " " * spaces)
 
-    def set_font_size(self, event):
+    def set_font_size(self, event=None):
         """根据鼠标滚轮改变字体大小"""
 
         # 滚轮一次触发delta返回 120（windows）或 -120
@@ -537,7 +536,7 @@ class EditText(tk.Frame):
                              foreground=self.sele_line_fg if self.sele_line_fg else None)
 
         self.Row_mark.tag_config('line_highlight', background=self.sele_row_mark_bg, foreground=self.sele_row_mark_fg)
-        self.Text.tag_configure("search_highlight", background="yellow")
+        self.Text.tag_configure("search_highlight", background=self.sele_line_bg)
 
     def insert(self, *args, **kwargs):
         """文本插入函数继承"""
@@ -835,7 +834,10 @@ class ToolTip:
         """鼠标进入控件范围执行函数"""
 
         # 首相执行控件自带的动画
-        self.widget.mouse_enter(event)
+        try:
+            self.widget.mouse_enter(event)
+        except AttributeError as error:
+            pass
 
         # 获取绝对位置
         x, y, _, _ = self.widget.bbox("insert")
@@ -854,7 +856,10 @@ class ToolTip:
         """鼠标离开控件范围执行函数"""
 
         # 首相执行控件自带的动画
-        self.widget.mouse_leave(event)
+        try:
+            self.widget.mouse_leave(event)
+        except AttributeError as error:
+            pass
 
         if self.tooltip:
             self.tooltip.destroy()
@@ -863,10 +868,6 @@ class ToolTip:
 
 if __name__ == '__main__':
     demo = tk.Tk()
-
-    notbook = NotBook(demo)
-    frame_1 = notbook.get_frame()
-    EditText(frame_1).pack()
-    notbook.add(frame_1, text="asd")
-    notbook.pack()
+    demo.geometry("300x300")
+    print("Ciallo~~")
     demo.mainloop()
